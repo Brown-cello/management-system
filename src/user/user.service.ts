@@ -1,17 +1,18 @@
-import { Injectable } from '@nestjs/common';
+import { HttpException, Injectable } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from './entities/user.entity';
 // import { JwtService } from '@nestjs/jwt';
 import { Repository } from 'typeorm';
+import { JwtService } from '@nestjs/jwt';
 
 @Injectable()
 export class UserService {
   constructor(
     @InjectRepository(User )
     private userRepository:Repository<User >,
-    // private jwtService:JwtService
+    private jwtService:JwtService
   ){}
   async create(dto:CreateUserDto){
     // const user = this.findByEmail(dto.email)
@@ -28,6 +29,13 @@ export class UserService {
     //  access_token: await this.jwtService.signAsync(payload),
     }
   }
+   async findEmail(email:string){
+    const userEmail =await this.userRepository.findOneBy({email})
+    if(!userEmail){
+      throw new HttpException('email already exists',400)
+    }
+    return userEmail
+   }
   
 
   findAll() {
@@ -44,5 +52,31 @@ export class UserService {
 
   remove(id: number) {
     return `This action removes a #${id} user`;
+  }
+
+  async user(headers:any) : Promise<any>{
+    const authorizationHeader =headers.authorization;
+    if(authorizationHeader){
+      const token = authorizationHeader.replace('Bearer ','');
+      const secret = process.env.JWTSECRET;
+      try{
+        const decoded = this.jwtService.verify(token);
+        let id =decoded["id"];
+
+        let user=await this.userRepository.findOneBy({id});
+
+        return {id:id , name:user?.firstName,email:user?.email };
+        
+      }
+      catch (error){
+        throw new HttpException('invalid token',401);
+
+      }
+
+    }
+    else {
+      throw new HttpException('invalid or missing Bearers token',401);
+    }
+    
   }
 }
