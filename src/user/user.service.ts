@@ -6,6 +6,7 @@ import { User } from './entities/user.entity';
 // import { JwtService } from '@nestjs/jwt';
 import { Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class UserService {
@@ -23,6 +24,9 @@ export class UserService {
     // dto.password = await bcrypt.hash(dto.password, salt);
 
 // const payload = { sub: 'user.id', email: 'user.email' };
+const salt = await bcrypt.genSalt(10);
+dto.password = await bcrypt.hash(dto.password, salt);
+
     const newCar = await this.userRepository.create(dto);
     return{
      userDetails : await this.userRepository.save(newCar),
@@ -65,7 +69,7 @@ export class UserService {
 
         let user=await this.userRepository.findOneBy({id});
 
-        return {id:id , name:user?.firstName,email:user?.email };
+        return {id:user?.id , name:user?.firstName,email:user?.email };
         
       }
       catch (error){
